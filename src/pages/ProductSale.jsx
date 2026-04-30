@@ -181,9 +181,20 @@ export default function ProductSale() {
     <DashboardLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Product Sale Report</h1>
-          <p className="text-gray-600">Detailed product performance and sales analysis</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">Product Sale Report</h1>
+            <p className="text-gray-600 text-sm">Detailed product performance and sales analysis</p>
+          </div>
+          {showPreview && (
+            <button onClick={() => window.print()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print
+            </button>
+          )}
         </div>
 
         {/* Filters */}
@@ -378,127 +389,6 @@ export default function ProductSale() {
           </>
         )}
 
-        {/* Preview Modal */}
-        {showPreview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Product Sale Report Preview</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                  >
-                    Print
-                  </button>
-                  <button
-                    onClick={() => setShowPreview(false)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="bg-white">
-                  <div className="mb-4 text-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Product Sale Summary Report</h1>
-                    <p className="text-sm text-gray-600">Period: {period} | Date: {startDate || 'N/A'} to {endDate || 'N/A'}</p>
-                  </div>
-
-                  <table className="w-full text-sm border-collapse">
-                    <thead className="bg-green-600 text-white">
-                      <tr>
-                        <th className="px-4 py-3 text-left border border-green-500">Category</th>
-                        <th className="px-4 py-3 text-left border border-green-500">Product Name</th>
-                        <th className="px-4 py-3 text-right border border-green-500">Units Sold</th>
-                        <th className="px-4 py-3 text-right border border-green-500">Revenue</th>
-                        <th className="px-4 py-3 text-right border border-green-500">Avg Price</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const grouped = groupedByCategory();
-                        const categoryNames = Object.keys(grouped);
-
-                        if (categoryNames.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan="5" className="px-6 py-12 text-center text-gray-500 border">
-                                No product sales data available
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        let grandTotalUnits = 0;
-                        let grandTotalRevenue = 0;
-
-                        return categoryNames.map((categoryName, catIdx) => {
-                          const items = grouped[categoryName];
-                          let categoryTotalUnits = 0;
-                          let categoryTotalRevenue = 0;
-
-                          return (
-                            <React.Fragment key={catIdx}>
-                              {items.map((item, itemIdx) => {
-                                const units = parseInt(item.units_sold);
-                                const revenue = parseFloat(item.revenue);
-                                const avgPrice = revenue / units;
-
-                                categoryTotalUnits += units;
-                                categoryTotalRevenue += revenue;
-                                grandTotalUnits += units;
-                                grandTotalRevenue += revenue;
-
-                                return (
-                                  <tr key={`${catIdx}-${itemIdx}`} className="border-b border-gray-200">
-                                    <td className="px-4 py-3 font-medium text-gray-900 border">
-                                      {itemIdx === 0 ? categoryName : ''}
-                                    </td>
-                                    <td className="px-4 py-3 text-gray-800 border">{item.product_name}</td>
-                                    <td className="px-4 py-3 text-right text-gray-900 border">{units.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right font-semibold text-green-600 border">
-                                      ${revenue.toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-gray-600 border">
-                                      ${avgPrice.toFixed(2)}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                              <tr className="bg-gray-100 border-b-2 border-gray-300 font-semibold">
-                                <td colSpan="2" className="px-4 py-3 text-right text-gray-900 border">
-                                  {categoryName} Subtotal
-                                </td>
-                                <td className="px-4 py-3 text-right text-gray-900 border">
-                                  {categoryTotalUnits.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-right text-green-700 border">
-                                  ${categoryTotalRevenue.toFixed(2)}
-                                </td>
-                                <td className="px-4 py-3 text-right text-gray-700 border">
-                                  ${(categoryTotalRevenue / categoryTotalUnits).toFixed(2)}
-                                </td>
-                              </tr>
-                            </React.Fragment>
-                          );
-                        }).concat(
-                          <tr key="grand-total" className="bg-gray-800 text-white font-bold">
-                            <td colSpan="2" className="px-4 py-3 text-right border">GRAND TOTAL</td>
-                            <td className="px-4 py-3 text-right border">{grandTotalUnits.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right border">${grandTotalRevenue.toFixed(2)}</td>
-                            <td className="px-4 py-3 text-right border">${(grandTotalRevenue / grandTotalUnits).toFixed(2)}</td>
-                          </tr>
-                        );
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

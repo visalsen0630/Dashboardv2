@@ -1,42 +1,51 @@
-import { useState, useEffect } from "react";
-import { getSales } from "../firebase/db";
+import { useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase/config";
 import DashboardLayout from "../components/DashboardLayout";
 
 export default function RevenueDetail() {
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('month');
+  const [loading, setLoading] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedStore, setSelectedStore] = useState('all');
-  const [status, setStatus] = useState('completed');
+  const [period, setPeriod] = useState('month');
+  const [status, setStatus] = useState('all');
 
   const user = JSON.parse(localStorage.getItem("user"));
   const selectedCompanyId = localStorage.getItem("selectedCompanyId") || user?.company_id;
-  const selectedLocationId = localStorage.getItem("selectedLocationId");
 
-  useEffect(() => {
-    fetchRevenueDetail();
-  }, [selectedCompanyId, selectedLocationId, period, status]);
-
-  const fetchRevenueDetail = async () => {
+  const handlePreview = async () => {
+    if (!startDate || !endDate) {
+      alert('Please select both start and end dates.');
+      return;
+    }
     setLoading(true);
+    setShowReport(true);
     try {
-      const locId = selectedLocationId && selectedLocationId !== 'all' ? selectedLocationId : null;
-      let response = await getSales(selectedCompanyId, locId, { limit: 1000 });
+      const snap = await getDocs(
+        query(collection(db, 'sales'), where('company_id', '==', selectedCompanyId))
+      );
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
 
-      // Client-side period filtering
-      const now = new Date();
-      response = response.filter(t => {
-        const d = t.created_at?.toDate ? t.created_at.toDate() : new Date(t.created_at);
-        if (period === 'day') return d.toDateString() === now.toDateString();
-        if (period === 'week') return (now - d) <= 7 * 24 * 60 * 60 * 1000;
-        if (period === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        if (period === 'year') return d.getFullYear() === now.getFullYear();
-        return true;
-      });
+      let rows = snap.docs
+        .map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(data.created_at),
+          };
+        })
+        .filter(s => s.created_at >= start && s.created_at <= end);
 
-      setTransactions(response);
+      if (status !== 'all') {
+        rows = rows.filter(s => s.status === status);
+      }
+
+      setTransactions(rows.sort((a, b) => b.created_at - a.created_at));
     } catch (err) {
       console.error("Error fetching revenue detail:", err);
     } finally {
@@ -44,157 +53,136 @@ export default function RevenueDetail() {
     }
   };
 
+  const totalNet = transactions.reduce((a, t) => a + parseFloat(t.total_amount || 0), 0);
+  const totalDiscount = transactions.reduce((a, t) => a + parseFloat(t.discount || 0), 0);
+  const totalTax = transactions.reduce((a, t) => a + parseFloat(t.tax || 0), 0);
+
   return (
     <DashboardLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Revenue Detail Report</h1>
-          <p className="text-gray-600">Detailed breakdown of all revenue transactions</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">Revenue Detail Report</h1>
+            <p className="text-gray-600 text-sm">Detailed breakdown of all revenue transactions</p>
+          </div>
+          {showReport && (
+            <button onClick={() => window.print()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print
+            </button>
+          )}
         </div>
 
         {/* Filters */}
         <div className="bg-white shadow-sm rounded-lg p-4 mb-6 flex items-center gap-2 overflow-x-auto">
-          <select
-            value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-            className="shrink-0 w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-          >
-            <option value="all">All Stores</option>
+          <select className="shrink-0 w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+            <option>All Stores</option>
           </select>
-
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="shrink-0 w-36 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-          >
-            <option value="completed">Completed</option>
+          <select value={status} onChange={e => setStatus(e.target.value)}
+            className="shrink-0 w-36 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+            <option value="all">All Status</option>
+            <option value="paid">Completed</option>
             <option value="pending">Pending</option>
             <option value="cancelled">Cancelled</option>
           </select>
-
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-          />
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            className="shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm" />
           <span className="shrink-0 text-gray-500">-</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-          />
-
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="shrink-0 w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-          >
+          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+            className="shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm" />
+          <select value={period} onChange={e => setPeriod(e.target.value)}
+            className="shrink-0 w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
             <option value="day">Day</option>
             <option value="week">Week</option>
             <option value="month">Month</option>
             <option value="year">Year</option>
           </select>
-
-          <button className="shrink-0 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium text-sm">
-            ALL
-          </button>
-
-          <button
-            onClick={() => window.print()}
-            className="shrink-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 text-sm"
-          >
+          <button onClick={handlePreview}
+            className="shrink-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2 text-sm">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
             Preview
           </button>
-
-          <button className="shrink-0 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-            </svg>
-          </button>
         </div>
 
-        {/* Transactions Table */}
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-gray-500 text-lg">Loading transactions...</div>
+        {!showReport ? (
+          <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm">
+            <div className="text-center">
+              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-600 text-lg mb-2">Select Date Range</p>
+              <p className="text-gray-500 text-sm">Pick start and end dates, then click Preview</p>
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3"></div>
+              <p className="text-gray-500">Loading transactions...</p>
+            </div>
           </div>
         ) : (
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <div className="bg-white shadow-md rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <p className="text-sm text-gray-500">Period: {startDate} to {endDate}</p>
+              <span className="text-sm text-gray-500">{transactions.length} records</span>
+            </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="w-full text-sm">
+                <thead className="bg-blue-600 text-white">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Receipt #
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date/Time
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Store
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Payment Method
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Subtotal
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tax
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Discount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
+                    <th className="px-4 py-3 text-left">Receipt #</th>
+                    <th className="px-4 py-3 text-left">Date/Time</th>
+                    <th className="px-4 py-3 text-left">Store</th>
+                    <th className="px-4 py-3 text-left">Payment</th>
+                    <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-right">Subtotal</th>
+                    <th className="px-4 py-3 text-right">Discount</th>
+                    <th className="px-4 py-3 text-right">Tax</th>
+                    <th className="px-4 py-3 text-right">Total</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {transactions && transactions.length > 0 ? (
-                    transactions.map((transaction) => (
-                      <tr key={transaction.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          #{transaction.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {(transaction.created_at?.toDate ? transaction.created_at.toDate() : new Date(transaction.created_at)).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.location_id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                          {transaction.payment_method}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${parseFloat(transaction.subtotal || 0).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${parseFloat(transaction.tax_amount || 0).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                          ${parseFloat(transaction.discount_amount || 0).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                          ${parseFloat(transaction.total_amount || 0).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
-                        No transactions found
+                <tbody className="divide-y divide-gray-100">
+                  {transactions.length > 0 ? transactions.map(t => (
+                    <tr key={t.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono text-blue-600 text-xs">#{t.id.substring(0, 8)}</td>
+                      <td className="px-4 py-3 text-gray-700">{t.created_at.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-gray-700">{t.location_name || t.location_id || 'N/A'}</td>
+                      <td className="px-4 py-3 capitalize text-gray-700">{t.payment_method || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          t.status === 'paid' ? 'bg-green-100 text-green-800' :
+                          t.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>{t.status}</span>
                       </td>
+                      <td className="px-4 py-3 text-right text-gray-900">${parseFloat(t.subtotal || t.total_amount || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right text-red-500">-${parseFloat(t.discount || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right text-gray-600">${parseFloat(t.tax || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">${parseFloat(t.total_amount || 0).toFixed(2)}</td>
                     </tr>
+                  )) : (
+                    <tr><td colSpan="9" className="px-6 py-12 text-center text-gray-500">No transactions found</td></tr>
                   )}
                 </tbody>
+                {transactions.length > 0 && (
+                  <tfoot className="bg-gray-900 text-white font-bold">
+                    <tr>
+                      <td colSpan="5" className="px-4 py-3">TOTAL ({transactions.length})</td>
+                      <td className="px-4 py-3 text-right">${(totalNet + totalDiscount).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right">-${totalDiscount.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right">${totalTax.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right">${totalNet.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
