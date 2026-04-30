@@ -27,6 +27,7 @@ export default function Inventory() {
     stock: "",
     category_id: "",
     backorder_allowed: false,
+    track_stock: true,
     image_url: "",
   });
 
@@ -82,6 +83,7 @@ export default function Inventory() {
         price: parseFloat(formData.price),
         cost: parseFloat(formData.cost),
         stock: parseInt(formData.stock) || 0,
+        track_stock: formData.track_stock !== false,
       };
 
       if (editingProduct) {
@@ -133,9 +135,20 @@ export default function Inventory() {
       stock: product.stock || 0,
       category_id: product.category_id || "",
       backorder_allowed: product.backorder_allowed || false,
+      track_stock: product.track_stock !== false,
       image_url: product.image_url || "",
     });
     setShowModal(true);
+  };
+
+  const handleToggleTrackStock = async (product) => {
+    const newValue = product.track_stock === false ? true : false;
+    try {
+      await updateProduct(product.id, { track_stock: newValue });
+      setProducts(products.map(p => p.id === product.id ? { ...p, track_stock: newValue } : p));
+    } catch (err) {
+      console.error('Error updating track_stock:', err);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -163,6 +176,7 @@ export default function Inventory() {
       stock: "",
       category_id: "",
       backorder_allowed: false,
+      track_stock: true,
       image_url: "",
     });
     setEditingProduct(null);
@@ -358,18 +372,24 @@ export default function Inventory() {
 
                       {/* Stock Status */}
                       <div className="mb-3">
-                        <select
-                          value={product.stock > 0 ? 'in_stock' : 'out_of_stock'}
-                          className={`w-full px-3 py-1.5 border rounded-lg text-sm font-medium ${
-                            product.stock > 0
-                              ? 'border-green-300 bg-green-50 text-green-700'
-                              : 'border-red-300 bg-red-50 text-red-700'
-                          }`}
-                        >
-                          <option value="in_stock">✓ In stock</option>
-                          <option value="out_of_stock">✗ Out of stock</option>
-                          <option value="low_stock">⚠ Low stock</option>
-                        </select>
+                        {product.track_stock === false ? (
+                          <div className="w-full px-3 py-1.5 border border-gray-200 bg-gray-50 text-gray-400 rounded-lg text-sm font-medium text-center">
+                            — Not tracked
+                          </div>
+                        ) : (
+                          <select
+                            value={product.stock > 0 ? 'in_stock' : 'out_of_stock'}
+                            className={`w-full px-3 py-1.5 border rounded-lg text-sm font-medium ${
+                              product.stock > 0
+                                ? 'border-green-300 bg-green-50 text-green-700'
+                                : 'border-red-300 bg-red-50 text-red-700'
+                            }`}
+                          >
+                            <option value="in_stock">✓ In stock</option>
+                            <option value="out_of_stock">✗ Out of stock</option>
+                            <option value="low_stock">⚠ Low stock</option>
+                          </select>
+                        )}
                       </div>
 
                       {/* Price */}
@@ -382,14 +402,36 @@ export default function Inventory() {
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-500">Stock</p>
-                          <p className={`text-lg font-bold ${
-                            product.stock > 10 ? 'text-green-600' :
-                            product.stock > 0 ? 'text-yellow-600' :
-                            'text-red-600'
-                          }`}>
-                            {product.stock}
-                          </p>
+                          {product.track_stock === false ? (
+                            <p className="text-lg font-bold text-gray-400">—</p>
+                          ) : (
+                            <p className={`text-lg font-bold ${
+                              product.stock > 10 ? 'text-green-600' :
+                              product.stock > 0 ? 'text-yellow-600' :
+                              'text-red-600'
+                            }`}>
+                              {product.stock}
+                            </p>
+                          )}
                         </div>
+                      </div>
+
+                      {/* Track Stock Toggle */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                        <span className="text-xs text-gray-500">Track Qty</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleTrackStock(product);
+                          }}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                            product.track_stock !== false ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            product.track_stock !== false ? 'translate-x-5' : 'translate-x-1'
+                          }`} />
+                        </button>
                       </div>
 
                       {product.backorder_allowed && (
@@ -561,6 +603,19 @@ export default function Inventory() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="track_stock"
+                      checked={formData.track_stock !== false}
+                      onChange={(e) => setFormData({ ...formData, track_stock: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="track_stock" className="text-sm text-gray-700">
+                      Track stock quantity (deduct from stock on sale)
+                    </label>
                   </div>
 
                   <div className="flex items-center gap-2">

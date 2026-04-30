@@ -198,11 +198,11 @@ export const createSale = async (saleData) => {
     updated_at: serverTimestamp(),
   });
 
-  // Decrement stock for each item
+  // Decrement stock only for items with stock tracking enabled
   const batch = writeBatch(db);
   if (saleData.items) {
     for (const item of saleData.items) {
-      if (item.product_id) {
+      if (item.product_id && item.track_stock !== false) {
         const productRef = doc(db, 'products', item.product_id);
         batch.update(productRef, { stock: increment(-item.quantity) });
       }
