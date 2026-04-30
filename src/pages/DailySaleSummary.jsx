@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { getUserLocations } from "../firebase/db";
 import DashboardLayout from "../components/DashboardLayout";
 
 export default function DailySaleSummary() {
@@ -9,9 +10,17 @@ export default function DailySaleSummary() {
   const [showReport, setShowReport] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState('');
 
   const user = JSON.parse(localStorage.getItem("user"));
   const selectedCompanyId = localStorage.getItem("selectedCompanyId") || user?.company_id;
+
+  useEffect(() => {
+    if (selectedCompanyId && user?.id) {
+      getUserLocations(user.id, selectedCompanyId).then(setLocations).catch(console.error);
+    }
+  }, [selectedCompanyId]);
 
   const handlePreview = async () => {
     if (!startDate || !endDate) {
@@ -37,7 +46,12 @@ export default function DailySaleSummary() {
             created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(data.created_at),
           };
         })
-        .filter(s => s.status === 'paid' && s.created_at >= start && s.created_at <= end);
+        .filter(s =>
+          s.status === 'paid' &&
+          s.created_at >= start &&
+          s.created_at <= end &&
+          (!selectedLocation || s.location_id === selectedLocation)
+        );
 
       // Group by date
       const grouped = {};
@@ -93,8 +107,12 @@ export default function DailySaleSummary() {
 
         {/* Filters */}
         <div className="bg-white shadow-sm rounded-lg p-4 mb-6 flex items-center gap-2 overflow-x-auto">
-          <select className="shrink-0 w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-            <option>All Stores</option>
+          <select value={selectedLocation} onChange={e => setSelectedLocation(e.target.value)}
+            className="shrink-0 w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+            <option value="">All Stores</option>
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
           </select>
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
             className="shrink-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm" />
