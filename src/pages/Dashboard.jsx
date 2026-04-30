@@ -6,7 +6,7 @@ import { FaShoppingCart, FaMoneyBillWave, FaChartLine, FaUsers, FaInfoCircle, Fa
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [timePeriod, setTimePeriod] = useState('all');
+  const [timePeriod, setTimePeriod] = useState('today');
   const [customDateRange, setCustomDateRange] = useState({
     start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -130,20 +130,9 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="bg-gray-50 min-h-screen">
-        {/* Tabs */}
+        {/* Time Period Filters */}
         <div className="bg-white border-b">
-          <div className="flex items-center px-6 pt-4">
-            <div className="flex gap-2">
-              <button
-                className="px-6 py-3 rounded-t-lg font-medium transition relative bg-pink-500 text-white shadow-md"
-              >
-                🏠 Overview
-              </button>
-            </div>
-          </div>
-
-          {/* Time Period Filters */}
-          <div className="px-6 py-3 border-t">
+          <div className="px-6 py-3">
             <div className="flex gap-6 items-center">
               {[
                 { label: 'All time', value: 'all' },
