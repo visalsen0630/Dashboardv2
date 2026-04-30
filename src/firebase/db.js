@@ -235,7 +235,6 @@ export const getSalesDashboard = async (companyId, period, dateRange) => {
     query(
       collection(db, 'sales'),
       where('company_id', '==', companyId),
-      where('status', '==', 'paid'),
       orderBy('created_at', 'desc')
     )
   );
@@ -246,7 +245,7 @@ export const getSalesDashboard = async (companyId, period, dateRange) => {
       ...data,
       created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(data.created_at),
     };
-  });
+  }).filter(s => s.status === 'paid');
 
   // Apply date filter
   const now = new Date();

@@ -266,38 +266,6 @@ export default function Dashboard() {
                 <tbody>
                   {data.sales_by_stores && data.sales_by_stores.length > 0 ? (
                     data.sales_by_stores
-                      .filter(store => {
-                        // If userLocations hasn't loaded yet, show all stores except current
-                        if (!userLocations || userLocations.length === 0) {
-                          // Just exclude current location
-                          const storeLocationId = store.location_id?.toString();
-                          if (selectedLocationId && storeLocationId === selectedLocationId.toString()) {
-                            return false;
-                          }
-                          return true;
-                        }
-
-                        // Filter to only show stores that the user has access to
-                        const userLocationIds = userLocations.map(loc => {
-                          // Handle both numeric and string IDs
-                          const id = loc.id || loc.location_id;
-                          return id?.toString();
-                        }).filter(Boolean);
-
-                        const storeLocationId = store.location_id?.toString();
-
-                        // Must be in user's accessible locations
-                        if (!userLocationIds.includes(storeLocationId)) {
-                          return false;
-                        }
-
-                        // Don't show the current user's selected location
-                        if (selectedLocationId && storeLocationId === selectedLocationId.toString()) {
-                          return false;
-                        }
-
-                        return true;
-                      })
                       .map((store, idx) => {
                         const storeGrossSales = parseFloat(store.gross_sales || parseFloat(store.total_amount) + parseFloat(store.total_discount || 0));
                         const storeDiscount = parseFloat(store.total_discount || 0);
