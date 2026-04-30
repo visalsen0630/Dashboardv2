@@ -213,13 +213,19 @@ export const createSale = async (saleData) => {
 };
 
 export const getSales = async (companyId, locationId, filters = {}) => {
-  let q = query(
-    collection(db, 'sales'),
-    where('company_id', '==', companyId),
-    orderBy('created_at', 'desc')
+  const snap = await getDocs(
+    query(
+      collection(db, 'sales'),
+      where('company_id', '==', companyId)
+    )
   );
-  const snap = await getDocs(q);
-  let sales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  let sales = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      const aTime = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at);
+      const bTime = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at);
+      return bTime - aTime;
+    });
 
   if (locationId) {
     sales = sales.filter(s => s.location_id === locationId);
@@ -234,8 +240,7 @@ export const getSalesDashboard = async (companyId, period, dateRange) => {
   const snap = await getDocs(
     query(
       collection(db, 'sales'),
-      where('company_id', '==', companyId),
-      orderBy('created_at', 'desc')
+      where('company_id', '==', companyId)
     )
   );
   let sales = snap.docs.map(d => {
@@ -245,7 +250,9 @@ export const getSalesDashboard = async (companyId, period, dateRange) => {
       ...data,
       created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(data.created_at),
     };
-  }).filter(s => s.status === 'paid');
+  })
+  .filter(s => s.status === 'paid')
+  .sort((a, b) => b.created_at - a.created_at);
 
   // Apply date filter
   const now = new Date();
