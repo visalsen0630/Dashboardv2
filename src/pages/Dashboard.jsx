@@ -122,7 +122,6 @@ export default function Dashboard() {
   const totalTax = parseFloat(overview?.total_tax || 0);
   const totalDiscounts = parseFloat(overview?.total_discounts || 0);
   const grossSales = parseFloat(overview?.gross_sales || totalRevenue + totalDiscounts);
-  const itemsSold = parseInt(overview?.total_items_sold || totalOrders * 2.3); // Mock estimate
   const grossProfit = parseFloat(overview?.gross_profit || totalRevenue * 0.4); // Mock estimate
 
   const maxOrderTypes = Math.max(...orderTypes.map(o => o.count), 1);
@@ -192,10 +191,10 @@ export default function Dashboard() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-4">Sales Overview</h2>
             <div className="grid grid-cols-4 gap-4">
-              {/* Total Items Sold */}
+              {/* Total Transaction */}
               <div className="bg-blue-50 rounded-lg p-6 border border-blue-100 shadow-sm">
-                <div className="text-sm text-blue-600 font-medium mb-2">Total Items Sold</div>
-                <div className="text-4xl font-bold text-gray-900">{itemsSold.toLocaleString()}</div>
+                <div className="text-sm text-blue-600 font-medium mb-2">Total Transaction</div>
+                <div className="text-4xl font-bold text-gray-900">{totalOrders.toLocaleString()}</div>
               </div>
 
               {/* Gross Sales */}
