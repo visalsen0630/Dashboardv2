@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import {
   getCompanyUsers, getCompanyLocations, getRoles, createRole, deleteRole,
-  updateUserRole, getUserAssignments, assignUserToLocation
+  updateUserRole, getUserAssignments, assignUserToLocation, createUser
 } from "../firebase/db";
 import DashboardLayout from "../components/DashboardLayout";
-import { FaPlus, FaTrash, FaUsers, FaUserShield } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaUsers, FaUserShield, FaUserPlus } from 'react-icons/fa';
 
 const DEFAULT_ROLES = ['admin', 'manager', 'cashier'];
 
@@ -15,6 +15,9 @@ export default function Users() {
   const [assignments, setAssignments] = useState({}); // userId -> location_id
   const [loading, setLoading] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState({ fullName: "", email: "", password: "", role: "cashier", locationId: "" });
 
   const user = JSON.parse(localStorage.getItem("user"));
   const selectedCompanyId = localStorage.getItem("selectedCompanyId") || user?.company_id;
@@ -91,6 +94,36 @@ export default function Users() {
     }
   };
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (!newUser.fullName.trim() || !newUser.email.trim() || !newUser.password || !newUser.locationId) {
+      alert("Please fill in name, email, password, and assign a store.");
+      return;
+    }
+    if (newUser.password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    setCreatingUser(true);
+    try {
+      await createUser({
+        fullName: newUser.fullName.trim(),
+        email: newUser.email.trim(),
+        password: newUser.password,
+        companyId: selectedCompanyId,
+        role: newUser.role,
+        locationId: newUser.locationId,
+      });
+      setNewUser({ fullName: "", email: "", password: "", role: "cashier", locationId: "" });
+      setShowCreateUser(false);
+      fetchData();
+    } catch (err) {
+      alert(err.message || "Failed to create user");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
@@ -127,9 +160,67 @@ export default function Users() {
 
         {/* Users */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><FaUsers /> All Users</h2>
+            <button onClick={() => setShowCreateUser(prev => !prev)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+              <FaUserPlus /> Create User
+            </button>
           </div>
+
+          {showCreateUser && (
+            <form onSubmit={handleCreateUser} className="px-6 py-4 border-b border-gray-200 bg-gray-50 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
+                <input type="text" value={newUser.fullName}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, fullName: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={newUser.email}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" value={newUser.password}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                  required minLength={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                <select value={newUser.role}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  {allRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Assigned Store *</label>
+                <select value={newUser.locationId}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, locationId: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="">Select store</option>
+                  {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateUser(false)}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                  Cancel
+                </button>
+                <button type="submit" disabled={creatingUser}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm disabled:opacity-50">
+                  {creatingUser ? "Creating..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-100">

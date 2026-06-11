@@ -1,13 +1,15 @@
 import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc,
   query, where, orderBy, limit, serverTimestamp, Timestamp,
   increment, writeBatch, documentId
 } from 'firebase/firestore';
 import {
-  signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword
+  signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword,
+  getAuth as getSecondaryAuth
 } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, auth, storage } from './config';
+import { db, auth, storage, firebaseConfig } from './config';
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
@@ -86,6 +88,34 @@ export const getCompanyUsers = async (companyId) => {
     query(collection(db, 'users'), where('company_id', '==', companyId))
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+// Creates a Firebase Auth account plus a `users` profile and a location
+// assignment, so the new user can log in to both the Dashboard (by email)
+// and the POS (by full name) and immediately has access to a store.
+export const createUser = async ({ fullName, email, password, companyId, role, locationId }) => {
+  // Use a separate, temporary app instance so creating the account doesn't
+  // sign the current admin out of the Dashboard.
+  const secondaryApp = initializeApp(firebaseConfig, `secondary-${Date.now()}`);
+  const secondaryAuth = getSecondaryAuth(secondaryApp);
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const uid = cred.user.uid;
+
+    await setDoc(doc(db, 'users', uid), {
+      full_name: fullName,
+      email,
+      company_id: companyId,
+      role,
+      created_at: serverTimestamp(),
+    });
+
+    await assignUserToLocation(uid, companyId, locationId);
+
+    return uid;
+  } finally {
+    await deleteApp(secondaryApp);
+  }
 };
 
 export const updateUserRole = async (userId, role) => {
