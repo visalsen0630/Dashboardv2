@@ -3,7 +3,7 @@ import {
   getCustomers, createCustomer, updateCustomer, deleteCustomer, getSales
 } from "../firebase/db";
 import DashboardLayout from "../components/DashboardLayout";
-import { FaFilter, FaShoppingBag, FaStar, FaDollarSign, FaSearch } from 'react-icons/fa';
+import { FaSearch } from 'react-icons/fa';
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -151,9 +151,6 @@ export default function Customers() {
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">List Of Customers</h1>
-          <div className="flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">
-            ⏰ All times are shown in GMT+7 (Asia/Phnom Penh) timezone
-          </div>
         </div>
 
         <div className="mb-6 flex items-center gap-4">
@@ -162,10 +159,6 @@ export default function Customers() {
             <input type="text" placeholder="Find by name, phone, email" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
           </div>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"><FaFilter /> More filters</button>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"><FaShoppingBag /> Purchased products history</button>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"><FaStar /> Loyalty customers</button>
-          <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition flex items-center gap-2 font-medium"><FaDollarSign /> INCREASE REVENUE $</button>
         </div>
 
         <div className="mb-4 text-sm text-gray-700">Selected <span className="font-bold">{filteredCustomers.length}</span> customers</div>
@@ -174,7 +167,7 @@ export default function Customers() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-orange-500 text-white">
+                <tr className="bg-blue-600 text-white">
                   <th className="px-4 py-3 text-left text-sm font-semibold"><input type="checkbox" className="w-4 h-4 rounded border-white" /></th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Phone Number</th>
