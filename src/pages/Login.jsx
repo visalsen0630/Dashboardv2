@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { loginDashboard } from "../firebase/db";
+import { loginDashboard, logoutUser } from "../firebase/db";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -15,7 +15,13 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await loginDashboard(form.email, form.password);
+      const userData = await loginDashboard(form.email, form.password);
+      if (userData.role === 'cashier') {
+        await logoutUser();
+        localStorage.removeItem('user');
+        setError("Cashiers don't have access to the Dashboard. Please use the POS app.");
+        return;
+      }
       window.location.href = "/dashboard";
     } catch (err) {
       setError(err.message || "Login failed");
