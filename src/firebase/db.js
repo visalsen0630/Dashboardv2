@@ -110,6 +110,9 @@ export const createUser = async ({ fullName, email, password, companyId, role, l
       created_at: serverTimestamp(),
     });
 
+    // Public lookup so POS can resolve full name -> email before sign-in.
+    await setDoc(doc(db, 'pos_login_lookup', fullName), { email });
+
     await assignUserToLocation(uid, companyId, locationId);
 
     return uid;
