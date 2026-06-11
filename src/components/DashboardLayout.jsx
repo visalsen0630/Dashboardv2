@@ -81,7 +81,6 @@ export default function DashboardLayout({ children }) {
     window.location.href = "/";
   };
 
-  const [showInventoryDropdown, setShowInventoryDropdown] = useState(false);
   const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
 
   const reportItems = [
@@ -158,34 +157,17 @@ export default function DashboardLayout({ children }) {
           </button>
 
           {/* Inventory */}
-          <div className="relative">
-            <button
-              onClick={() => setShowInventoryDropdown(!showInventoryDropdown)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                location.pathname.startsWith('/inventory') ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              <span className="font-medium flex-1 text-left">Inventory</span>
-              <svg className={`w-4 h-4 transition-transform ${showInventoryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showInventoryDropdown && (
-              <div className="mt-2 ml-4 space-y-1">
-                <button onClick={() => { navigate('/inventory?view=stock'); setShowInventoryDropdown(false); }}
-                  className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${location.pathname === '/inventory' && new URLSearchParams(location.search).get('view') === 'stock' ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-100"}`}>
-                  Stock
-                </button>
-                <button onClick={() => { navigate('/inventory?view=category'); setShowInventoryDropdown(false); }}
-                  className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${location.pathname === '/inventory' && new URLSearchParams(location.search).get('view') === 'category' ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-100"}`}>
-                  Category
-                </button>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => navigate('/inventory')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+              location.pathname.startsWith('/inventory') ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span className="font-medium">Inventory</span>
+          </button>
 
           {/* Discount & Voucher */}
           <div className="relative">
