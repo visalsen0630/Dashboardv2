@@ -7,6 +7,7 @@ import Customers from "./pages/Customers";
 import Discounts from "./pages/Discounts";
 import PaymentMethods from "./pages/PaymentMethods";
 import POSConfig from "./pages/POSConfig";
+import Users from "./pages/Users";
 
 // Report Pages
 import RevenueSummary from "./pages/RevenueSummary";
@@ -25,6 +26,7 @@ function App() {
         <Route path="/discounts" element={<Discounts />} />
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/pos-config" element={<POSConfig />} />
+        <Route path="/users" element={<Users />} />
 
         {/* Report Routes */}
         <Route path="/reports/revenue-summary" element={<RevenueSummary />} />

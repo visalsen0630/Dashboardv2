@@ -10,7 +10,7 @@ import { FaPlus, FaEdit, FaTrash, FaTicketAlt, FaPercent, FaTags } from 'react-i
 export default function Discounts() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  const discountType = queryParams.get('type') || 'voucher';
+  const discountType = queryParams.get('type') || 'discounts';
   const [activeSection, setActiveSection] = useState(discountType);
   const [discounts, setDiscounts] = useState([]);
   const [vouchers, setVouchers] = useState([]);

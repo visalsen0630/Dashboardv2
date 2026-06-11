@@ -72,6 +72,77 @@ export const getUserLocations = async (userId, companyId) => {
     .map(d => ({ id: d.id, ...d.data() }));
 };
 
+export const getCompanyLocations = async (companyId) => {
+  const snap = await getDocs(
+    query(collection(db, 'locations'), where('company_id', '==', companyId))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+// ─── USERS & ROLES ───────────────────────────────────────────────────────────
+
+export const getCompanyUsers = async (companyId) => {
+  const snap = await getDocs(
+    query(collection(db, 'users'), where('company_id', '==', companyId))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+export const updateUserRole = async (userId, role) => {
+  await updateDoc(doc(db, 'users', userId), { role, updated_at: serverTimestamp() });
+};
+
+export const getRoles = async (companyId) => {
+  const snap = await getDocs(
+    query(collection(db, 'roles'), where('company_id', '==', companyId))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+export const createRole = async (companyId, name) => {
+  const ref = await addDoc(collection(db, 'roles'), {
+    company_id: companyId,
+    name,
+    created_at: serverTimestamp(),
+  });
+  return ref.id;
+};
+
+export const deleteRole = async (id) => {
+  await deleteDoc(doc(db, 'roles', id));
+};
+
+export const getUserAssignments = async (userId, companyId) => {
+  const snap = await getDocs(
+    query(
+      collection(db, 'user_assignments'),
+      where('user_id', '==', userId),
+      where('company_id', '==', companyId)
+    )
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+export const assignUserToLocation = async (userId, companyId, locationId) => {
+  const existing = await getDocs(
+    query(
+      collection(db, 'user_assignments'),
+      where('user_id', '==', userId),
+      where('company_id', '==', companyId)
+    )
+  );
+  const batch = writeBatch(db);
+  existing.docs.forEach(d => batch.delete(d.ref));
+  const newRef = doc(collection(db, 'user_assignments'));
+  batch.set(newRef, {
+    user_id: userId,
+    company_id: companyId,
+    location_id: locationId,
+    created_at: serverTimestamp(),
+  });
+  await batch.commit();
+};
+
 // ─── CATEGORIES ──────────────────────────────────────────────────────────────
 
 export const getCategories = async (companyId, locationId) => {
